@@ -26,6 +26,7 @@ namespace StoatRecognizer
         int _currImage = 0;
 
         string _sequencesPath = @"C:\Users\Jamie\Desktop\source\StoatRecognizer\StoatRecognizer\images\sequences";
+        string _templatePath = @"C:\Users\Jamie\Desktop\source\StoatRecognizer\StoatRecognizer\images\templates\stoat.bmp";
 
         public SequenceViewer()
         {
@@ -55,7 +56,7 @@ namespace StoatRecognizer
 
             foreach (var imagePath in Directory.GetFiles(_sequences[_currSequence]))
             {
-                _seqImages.Add(new Image<Gray, byte>(imagePath).SmoothMedian(3));
+                _seqImages.Add(new Image<Gray, byte>(imagePath).SmoothMedian(5));
                 _subMog2.Apply(_seqImages[0], fgMask);
 
                 _subMog2.Apply(_seqImages.Last(), fgMask);
@@ -86,7 +87,7 @@ namespace StoatRecognizer
 
                 if (cannyChkBox.Checked)
                     tempImg = tempImg.Canny(cannySlider.Value, cannySlider.Value * 3);
-                tempImg &= fgMask.Erode(1).Dilate(7).Erode(2);
+                tempImg &= fgMask.Erode(1).Dilate(8).Erode(1);
 
                 if (contourChkBox.Checked)
                 {
@@ -95,7 +96,9 @@ namespace StoatRecognizer
                     var maskContours = new VectorOfVectorOfPoint();
                     CvInvoke.FindContours(fgMask.Erode(1).Dilate(8).Erode(1), maskContours, null, Emgu.CV.CvEnum.RetrType.List, Emgu.CV.CvEnum.ChainApproxMethod.ChainApproxNone);
                     int biggestContour = -1;
-                    double contourSize = 0, currSize;
+                    double contourSize = 0, currSize, simularity;
+                    VectorOfVectorOfPoint tempContours = new VectorOfVectorOfPoint();
+                    CvInvoke.FindContours(new Image<Gray, Byte>(_templatePath).Not(), tempContours, null, Emgu.CV.CvEnum.RetrType.External, Emgu.CV.CvEnum.ChainApproxMethod.ChainApproxSimple);
                     for (int i = 0; i < maskContours.Size; i++)
                     {
                         currSize = CvInvoke.ContourArea(maskContours[i]);
@@ -107,8 +110,21 @@ namespace StoatRecognizer
                     }
                     contourLbl.Text = "Biggest Contour: " + contourSize;
                     if (biggestContour != -1)
+                    {
+                        // VectorOfPoint hullContour = new VectorOfPoint();
+                        // CvInvoke.ConvexHull(maskContours[biggestContour], hullContour, returnPoints: false);
                         dispImg.Draw(maskContours, biggestContour, new Bgr(0, 0, 255), -1);
+                        // dispImg.Draw(hullContour.ToArray(), new Bgr(255, 255, 255), 1);
+                        simularity = CvInvoke.MatchShapes(maskContours[biggestContour], tempContours[0], Emgu.CV.CvEnum.ContoursMatchType.I1);
+                        if (simularity < 0.2)
+                            dispImg.Draw("stoat", new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
+                        else if (simularity < 1)
+                            dispImg.Draw("maybe stoat", new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
+                        else 
+                            dispImg.Draw("probably not stoat", new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
+                        
 
+                    }
                     picBox.Image = dispImg.ToBitmap();
                     return;
                 }
