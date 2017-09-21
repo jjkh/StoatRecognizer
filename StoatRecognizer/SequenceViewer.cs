@@ -31,8 +31,8 @@ namespace StoatRecognizer
         int _currSequence = 0;
         int _currImage = 0;
 
-        string _sequencesPath = @"C:\Users\Jamie\Desktop\source\StoatRecognizer\StoatRecognizer\images\sequences";
-        string _templatePath = @"C:\Users\Jamie\Desktop\source\StoatRecognizer\StoatRecognizer\images\templates\stoat.bmp";
+        string _sequencesPath = @"C:\Users\Hunter\Desktop\ImageAssignTwo";
+        string _templatePath = @"C:\Users\Hunter\Desktop\StoatRecognizer\StoatRecognizer\images\templates\stoat.bmp";
         
         
         List<PathHistory> _paths = new List<PathHistory>();
@@ -230,10 +230,14 @@ namespace StoatRecognizer
                 }
             }
             int j = 1;
-            while (j < _paths.Count && _paths.Last().Points.Count != 0)
+            while (j < _paths.Count)
             {
-                map.Draw(new LineSegment2DF(_paths[j-1].Points.Last(), _paths[j].Points.First()), new Bgr(0, 0, 255), 4);
+                if (_paths[j - 1].Points.Count != 0 && _paths[j].Points.Count != 0)
+                {
+                    map.Draw(new LineSegment2DF(_paths[j - 1].Points.Last(), _paths[j].Points.First()), new Bgr(0, 0, 255), 4);
+                }
                 j++;
+
             }
             miniMap.Image = map.ToBitmap();
         }
