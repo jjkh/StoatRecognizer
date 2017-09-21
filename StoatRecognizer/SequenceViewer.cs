@@ -99,8 +99,7 @@ namespace StoatRecognizer
 
                 if (contourChkBox.Checked)
                 {
-                    var dispImg = tempImg.Convert<Bgr, Byte>();
-                    
+                    var dispImg = _seqImages[_currImage].Convert<Bgr, Byte>();
                     var maskContours = new VectorOfVectorOfPoint();
                     CvInvoke.FindContours(fgMask.Erode(1).Dilate(8).Erode(1), maskContours, null, Emgu.CV.CvEnum.RetrType.List, Emgu.CV.CvEnum.ChainApproxMethod.ChainApproxNone);
                     int biggestContour = -1;
@@ -118,10 +117,14 @@ namespace StoatRecognizer
                     }
                     contourLbl.Text = "Biggest Contour: " + contourSize;
                     if (biggestContour != -1)
-                    { 
-                        dispImg.Draw(maskContours, biggestContour, new Bgr(0, 0, 255), -1);
-                        // dispImg.Draw(hullContour.ToArray(), new Bgr(255, 255, 255), 1);
+                    {
                         simularity = CvInvoke.MatchShapes(maskContours[biggestContour], tempContours[0], Emgu.CV.CvEnum.ContoursMatchType.I1);
+                        var newPosition = GetContourCentroid(maskContours[biggestContour]);
+                        UpdateTrail(newPosition, simularity);
+                        dispImg = DrawTrail(dispImg);
+
+                        dispImg.Draw(CvInvoke.MinAreaRect(maskContours[biggestContour]), new Bgr(0, 255, 0), 2);
+                        dispImg.Draw(new CircleF(newPosition, 2), new Bgr(0, 255, 0), 2);
                         if (simularity < 0.2)
                             dispImg.Draw("stoat", new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
                         else if (simularity < 1)
@@ -129,12 +132,10 @@ namespace StoatRecognizer
                         else 
                             dispImg.Draw("probably not stoat", new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
                         
-                        var newPosition = GetContourCentroid(maskContours[biggestContour]);
-                        dispImg.Draw(new CircleF(newPosition, 2), new Bgr(0, 255, 0), 2);
-                        UpdateTrail(newPosition, simularity);
                     }
                     else
                     {
+                        dispImg = DrawTrail(dispImg);
                         if (_paths.Last().Points.Count > 0)
                             _paths.Add(new PathHistory());
                     }
@@ -209,13 +210,10 @@ namespace StoatRecognizer
             {
                 _paths.Last().Points.Add(newPos);
             }
-
-            DrawTrail();
         }
 
-        private void DrawTrail()
+        private Image<Bgr, Byte> DrawTrail(Image<Bgr, Byte> map)
         {
-            Image<Bgr, Byte> map = _seqImages[0].Convert<Bgr, Byte>();
             var rnd = new Random();
 
             int j = 1;
@@ -240,7 +238,7 @@ namespace StoatRecognizer
                     map.Draw(new LineSegment2DF(path.Points[i], path.Points[i + 1]), lineColour, 4);
                 }
             }
-            miniMap.Image = map.ToBitmap();
+            return map;
         }
 
         private PointF GetContourCentroid(VectorOfPoint contour)
