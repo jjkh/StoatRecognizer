@@ -16,6 +16,12 @@ using System.Windows.Forms;
 
 namespace StoatRecognizer
 {
+    public class PathHistory
+    {
+        public double Simularity = 0;
+        public List<PointF> Points = new List<PointF>();
+    }
+
     public partial class SequenceViewer : Form
     {
         string[] _sequences;
@@ -29,7 +35,7 @@ namespace StoatRecognizer
         string _templatePath = @"C:\Users\Jamie\Desktop\source\StoatRecognizer\StoatRecognizer\images\templates\stoat.bmp";
         
         
-        List<List<PointF>> _paths = new List<List<PointF>>();
+        List<PathHistory> _paths = new List<PathHistory>();
 
         public SequenceViewer()
         {
@@ -63,7 +69,7 @@ namespace StoatRecognizer
             miniMap.Image = _seqImages[0].ToBitmap();
 
             _paths.Clear();
-            _paths.Add(new List<PointF>());
+            _paths.Add(new PathHistory());
             _currImage = 0;
             UpdateImage();
         }
@@ -112,6 +118,7 @@ namespace StoatRecognizer
                     }
                     contourLbl.Text = "Biggest Contour: " + contourSize;
                     if (biggestContour != -1)
+                    { 
                         dispImg.Draw(maskContours, biggestContour, new Bgr(0, 0, 255), -1);
                         // dispImg.Draw(hullContour.ToArray(), new Bgr(255, 255, 255), 1);
                         simularity = CvInvoke.MatchShapes(maskContours[biggestContour], tempContours[0], Emgu.CV.CvEnum.ContoursMatchType.I1);
@@ -122,16 +129,14 @@ namespace StoatRecognizer
                         else 
                             dispImg.Draw("probably not stoat", new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
                         
-
-                    }
                         var newPosition = GetContourCentroid(maskContours[biggestContour]);
                         dispImg.Draw(new CircleF(newPosition, 2), new Bgr(0, 255, 0), 2);
-                        UpdateTrail(newPosition);
+                        UpdateTrail(newPosition, simularity);
                     }
                     else
                     {
-                        if (_paths.Last().Count > 0)
-                            _paths.Add(new List<PointF>());
+                        if (_paths.Last().Points.Count > 0)
+                            _paths.Add(new PathHistory());
                     }
                     picBox.Image = dispImg.ToBitmap();
                     return;
@@ -161,19 +166,19 @@ namespace StoatRecognizer
                 UpdateImage();
         }
 
-        private void UpdateTrail(PointF newPos)
+        private void UpdateTrail(PointF newPos, double simularity)
         {
-            if (_paths.Last().Count > 0)
+            if (_paths.Last().Points.Count > 0)
             {
-                var oldPos = _paths.Last().Last();
+                var oldPos = _paths.Last().Points.Last();
                 var dist = Math.Sqrt(Math.Pow(newPos.X - oldPos.X, 2) + Math.Pow(newPos.Y - oldPos.Y, 2));
                 if (dist > 250)
                 {
-                    _paths.Add(new List<PointF>());
+                    _paths.Add(new PathHistory());
                 }
                 else
                 {
-                    var currPath = _paths.Last();
+                    var currPath = _paths.Last().Points;
                     double largestDist = -1;
 
                     if (currPath.Count > 2)
@@ -186,22 +191,23 @@ namespace StoatRecognizer
                         }
                         if (dist > largestDist * 2)
                         {
-                            _paths.Add(new List<PointF>());
+                            _paths.Add(new PathHistory());
                         }
                         else
                         {
-                            _paths.Last().Add(newPos);
+                            _paths.Last().Points.Add(newPos);
+                            _paths.Last().Simularity += simularity;
                         }
                     }
                     else
                     {
-                        _paths.Last().Add(newPos);
+                        _paths.Last().Points.Add(newPos);
                     }
                 }
             }
             else
             {
-                _paths.Last().Add(newPos);
+                _paths.Last().Points.Add(newPos);
             }
 
             DrawTrail();
@@ -214,19 +220,19 @@ namespace StoatRecognizer
 
             foreach (var path in _paths)
             {
-                if (path.Count < 2)
+                if (path.Points.Count < 2)
                     continue;
 
                 var lineColour = new Bgr(0, 255, 255);
-                for (int i = 0; i < path.Count - 1; i++)
+                for (int i = 0; i < path.Points.Count - 1; i++)
                 {
-                    map.Draw(new LineSegment2DF(path[i], path[i + 1]), lineColour, 4);
+                    map.Draw(new LineSegment2DF(path.Points[i], path.Points[i + 1]), lineColour, 4);
                 }
             }
             int j = 1;
-            while (j < _paths.Count && _paths.Last().Count != 0)
+            while (j < _paths.Count && _paths.Last().Points.Count != 0)
             {
-                map.Draw(new LineSegment2DF(_paths[j-1].Last(), _paths[j].First()), new Bgr(0, 0, 255), 4);
+                map.Draw(new LineSegment2DF(_paths[j-1].Points.Last(), _paths[j].Points.First()), new Bgr(0, 0, 255), 4);
                 j++;
             }
             miniMap.Image = map.ToBitmap();
