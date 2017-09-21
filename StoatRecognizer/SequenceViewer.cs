@@ -218,6 +218,17 @@ namespace StoatRecognizer
             Image<Bgr, Byte> map = _seqImages[0].Convert<Bgr, Byte>();
             var rnd = new Random();
 
+            int j = 1;
+            while (j < _paths.Count)
+            {
+                if (_paths[j - 1].Points.Count != 0 && _paths[j].Points.Count != 0)
+                {
+                    map.Draw(new LineSegment2DF(_paths[j - 1].Points.Last(), _paths[j].Points.First()), new Bgr(0, 0, 170), 4);
+                }
+                j++;
+
+            }
+
             foreach (var path in _paths)
             {
                 if (path.Points.Count < 2)
@@ -228,16 +239,6 @@ namespace StoatRecognizer
                 {
                     map.Draw(new LineSegment2DF(path.Points[i], path.Points[i + 1]), lineColour, 4);
                 }
-            }
-            int j = 1;
-            while (j < _paths.Count)
-            {
-                if (_paths[j - 1].Points.Count != 0 && _paths[j].Points.Count != 0)
-                {
-                    map.Draw(new LineSegment2DF(_paths[j - 1].Points.Last(), _paths[j].Points.First()), new Bgr(0, 0, 255), 4);
-                }
-                j++;
-
             }
             miniMap.Image = map.ToBitmap();
         }
