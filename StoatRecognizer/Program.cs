@@ -16,7 +16,7 @@ namespace StoatRecognizer
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new StoatForm());
+            Application.Run(new SequenceViewer());
         }
     }
 }
