@@ -20,6 +20,12 @@ namespace StoatRecognizer
     {
         public double Simularity = 0;
         public List<PointF> Points = new List<PointF>();
+
+        public void UpdateSimularity(double simularity)
+        {
+            if (simularity < Simularity || Points.Count == 1)
+                Simularity = simularity;
+        }
     }
 
     public partial class SequenceViewer : Form
@@ -31,8 +37,8 @@ namespace StoatRecognizer
         int _currSequence = 0;
         int _currImage = 0;
 
-        string _sequencesPath = @"C:\Users\Hunter\Desktop\ImageAssignTwo";
-        string _templatePath = @"C:\Users\Hunter\Desktop\StoatRecognizer\StoatRecognizer\images\templates\stoat.bmp";
+        string _sequencesPath = @"C:\Users\Jamie\Desktop\source\StoatRecognizer\StoatRecognizer\images\sequences";
+        string _templatePath = @"C:\Users\Jamie\Desktop\source\StoatRecognizer\StoatRecognizer\images\templates\stoat.bmp";
         
         
         List<PathHistory> _paths = new List<PathHistory>();
@@ -125,13 +131,6 @@ namespace StoatRecognizer
 
                         dispImg.Draw(CvInvoke.MinAreaRect(maskContours[biggestContour]), new Bgr(0, 255, 0), 2);
                         dispImg.Draw(new CircleF(newPosition, 2), new Bgr(0, 255, 0), 2);
-                        if (simularity < 0.2)
-                            dispImg.Draw("stoat", new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
-                        else if (simularity < 1)
-                            dispImg.Draw("maybe stoat", new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
-                        else 
-                            dispImg.Draw("probably not stoat", new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
-                        
                     }
                     else
                     {
@@ -197,20 +196,20 @@ namespace StoatRecognizer
                         else
                         {
                             _paths.Last().Points.Add(newPos);
-                            _paths.Last().Simularity += simularity;
+                            _paths.Last().UpdateSimularity(simularity);
                         }
                     }
                     else
                     {
                         _paths.Last().Points.Add(newPos);
-                        _paths.Last().Simularity += simularity;
+                        _paths.Last().UpdateSimularity(simularity);
                     }
                 }
             }
             else
             {
                 _paths.Last().Points.Add(newPos);
-                _paths.Last().Simularity += simularity;
+                _paths.Last().UpdateSimularity(simularity);
             }
         }
 
@@ -234,7 +233,30 @@ namespace StoatRecognizer
                 if (path.Points.Count < 2)
                     continue;
 
-                var lineColour = new Bgr(0, 255, 255);
+                Bgr lineColour = new Bgr(0, 0, 170);
+
+                if (path.Points.Count > 2)
+                {
+                    
+                    if (path.Simularity < 0.025)
+                    {
+                        if (path == _paths.Last())
+                            map.Draw(String.Format("probably stoat ({0:0.###})", path.Simularity), new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
+                        lineColour = new Bgr(0, 255, 255);
+                    }
+                    else if (path.Simularity < 0.35)
+                    {
+                        if (path == _paths.Last())
+                            map.Draw(String.Format("maybe stoat ({0:0.###})", path.Simularity), new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
+                        lineColour = new Bgr(0, 210, 210);
+                    }
+                    else
+                    {
+                        if (path == _paths.Last())
+                            map.Draw(String.Format("probably not stoat ({0:0.###})", path.Simularity), new Point(10, 470), Emgu.CV.CvEnum.FontFace.HersheyComplex, 1, new Bgr(255, 255, 255));
+                        lineColour = new Bgr(0, 160, 160);
+                    }
+                }
                 for (int i = 0; i < path.Points.Count - 1; i++)
                 {
                     map.Draw(new LineSegment2DF(path.Points[i], path.Points[i + 1]), lineColour, 4);
